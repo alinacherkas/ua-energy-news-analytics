@@ -47,3 +47,5 @@ The share of articles mentioning these people show clear spikes for politicians 
 - [Олексій Гончарук](https://uk.wikipedia.org/wiki/Гончарук_Олексій_Валерійович) (колишній Прем'єр-міністр України)
 
 Частка статей, у яких названі дані особи, зростає у період політичної активності для політиків, але є більш стабільною для представників бізнесу.
+
+![Dashboard](images/dashboard.png)
