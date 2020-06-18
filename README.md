@@ -9,7 +9,6 @@
 - `UAEnergy_Out*.xlsx` - data files created as part of the scraping. The full set of scraped articles with metadata can be found in `UAEnergy_Out3_MergedArticles.xlsx`.
 
 - Click to view [UA Energy Mini-Project.ipynb](https://nbviewer.jupyter.org/github/alinacherkas/UA-Energy-Mini-Project/blob/master/UA%20Energy%20Mini-Project.ipynb)
-)
 
 ## Abstract
 
@@ -21,12 +20,12 @@ The mini-project sets out to collect text data from a leading Ukrainian energy n
 - "транзит" (transit)
 
 The most frequently mentioned people are:
-- Andriy Kobolyev (CEO of Naftogaz)
-- Oleksiy Orzhel (former Minister of Energy and Environmental Protection of Ukraine)
-- Volodymyr Groysman (former Prime Minister of Ukraine)
-- Yuriy Vitrenko (Director for Business Development at Naftogaz)
+- [Andriy Kobolyev](https://en.wikipedia.org/wiki/Andriy_Kobolyev) (CEO of Naftogaz)
+- [Oleksiy Orzhel](https://en.wikipedia.org/wiki/Oleksiy_Orzhel) (former Minister of Energy and Environmental Protection of Ukraine)
+- [Volodymyr Groysman](https://en.wikipedia.org/wiki/Volodymyr_Groysman) (former Prime Minister of Ukraine)
+- [Yuriy Vitrenko](https://en.wikipedia.org/wiki/Vitrenko_Yuriy_Yuriyovytch) (Director for Business Development at Naftogaz)
 - Olha Buslavets (acting Minister of Energy and Environmental Protection of Ukraine as of April 2020)
-- Oleksiy Honcharuk (former Prime Minister of Ukraine)
+- [Oleksiy Honcharuk](https://en.wikipedia.org/wiki/Oleksiy_Honcharuk) (former Prime Minister of Ukraine)
 
 The share of articles mentioning these people show clear spikes for politicians but a more stable trend for business figures.
 
@@ -40,11 +39,11 @@ The share of articles mentioning these people show clear spikes for politicians 
 - "транзит"
 
 Найчастіше згадуваними особами є:
-- Андрій Коболєв (голова правління НАК «Нафтогаз України»)
-- Олексій Оржель (колишній міністр енергетики та захисту довкілля України)
-- Володимир Гройсман (колишній Прем'єр-міністр України)
-- Юрій Вітренко (виконавчий директор НАК «Нафтогаз України»)
-- Ольга Буславець (в.о. міністр енергетики та захисту довкілля України з квітня 2020)
-- Олексій Гончарук (колишній Прем'єр-міністр України)
+- [Андрій Коболєв](https://uk.wikipedia.org/wiki/Коболєв_Андрій_Володимирович) (голова правління НАК «Нафтогаз України»)
+- [Олексій Оржель](https://uk.wikipedia.org/wiki/Оржель_Олексій_Анатолійович) (колишній міністр енергетики та захисту довкілля України)
+- [Володимир Гройсман](https://uk.wikipedia.org/wiki/Гройсман_Володимир_Борисович) (колишній Прем'єр-міністр України)
+- [Юрій Вітренко](https://uk.wikipedia.org/wiki/Вітренко_Юрій_Юрійович) (виконавчий директор НАК «Нафтогаз України»)
+- [Ольга Буславець](https://uk.wikipedia.org/wiki/Буславець_Ольга_Анатоліївна) (в.о. міністр енергетики та захисту довкілля України з квітня 2020)
+- [Олексій Гончарук](https://uk.wikipedia.org/wiki/Гончарук_Олексій_Валерійович) (колишній Прем'єр-міністр України)
 
 Частка статей, у яких названі дані особи, зростає у період політичної активності для політиків, але є більш стабільною для представників бізнесу.
