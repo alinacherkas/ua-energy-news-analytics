@@ -49,7 +49,7 @@ def parse_news(link: str, use_date: bool = True):
     assert results.status_code == 200, f"HTTP Error Code: {results.status_code}"
 
     # Locating news section and parsing the articles
-    soup = BeautifulSoup(results.content, features="lxml")
+    soup = BeautifulSoup(results.content, features="html.parser")
     news_section = soup.find_all("div", {"class": "wrap"})[1]
     articles = news_section.find_all("div", {"class": "article"})
     df_articles = pd.DataFrame(
@@ -83,7 +83,7 @@ def get_article_content(link: str, add_root: bool = True, warnings: bool = False
     results = requests.get(link)
     assert results.status_code == 200, f"HTTP Error Code: {results.status_code}"
 
-    soup = BeautifulSoup(results.content, features="lxml")
+    soup = BeautifulSoup(results.content, features="html.parser")
     class_name = "col-lg-7 col-md-8 col-sm-8 col-lg-offset-2 content-article content-article-inner"
     article_object = soup.find("div", {"class": class_name})
     if article_object is None:
