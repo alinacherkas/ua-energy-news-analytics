@@ -84,8 +84,7 @@ def get_article_content(link: str, add_root: bool = True, warnings: bool = False
     assert results.status_code == 200, f"HTTP Error Code: {results.status_code}"
 
     soup = BeautifulSoup(results.content, features="html.parser")
-    class_name = "col-lg-7 col-md-8 col-sm-8 col-lg-offset-2 content-article content-article-inner"
-    article_object = soup.find("div", {"class": class_name})
+    article_object = soup.find("div", {"class": "content-article-inner"})
     if article_object is None:
         if warnings:
             print("No article found:", link)
