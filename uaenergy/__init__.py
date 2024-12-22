@@ -1,119 +1,116 @@
+"""
+Functions for scraping content from [UA-Energy.org](https://ua-energy.org).
+"""
+
+from dataclasses import dataclass
+
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 
-def parse_article(article):
+@dataclass
+class ArticleMetadata:
+    url: str
+    title: str
+    time: str
+
+    @classmethod
+    def from_tag(cls, tag: Tag) -> "ArticleMetadata":
+        """
+        Factory method to create an article from an HTML tag.
+
+        Parameters
+        ----------
+        tag : Tag
+            HTML tag of the article.
+        """
+        return cls(
+            url=tag.a.get("href"),
+            title=tag.a.text,
+            time=" ".join([x.text for x in tag.find_all("span")]),
+        )
+
+
+@dataclass
+class ArticleContent:
+    url: str
+    text: str
+    tags: list[str]
+    similar: list[str]
+
+    @classmethod
+    def from_url(cls, url: str) -> "ArticleContent":
+        """
+        Parse a full article to extract basic information
+
+        Parameters
+        ----------
+        url : str
+            A URL to a full article.
+        """
+        if not url.startswith("https"):
+            url = "https://ua-energy.org" + url
+
+        response = requests.get(url)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, features="html.parser")
+        article_object = soup.find("div", {"class": "content-article-inner"})
+        if article_object is None:
+            return cls(url=url, text=None, tags=None, similar=None)
+
+        similar = [
+            tag.a.get("href")
+            for tag in article_object.find_all("p")
+            if "ЧИТАЙТЕ ТАКОЖ" in tag.text and tag.find("a") is not None
+        ]
+        if len(similar) == 0:
+            similar = None
+
+        text = " ".join(
+            [
+                tag.text
+                for tag in article_object.find_all("p")
+                if not "ЧИТАЙТЕ ТАКОЖ" in tag.text
+            ]
+        )
+
+        try:
+            tags = article_object.find("div", {"class": "tags"})
+            tags = {tag.get("href"): tag.text for tag in tags.find_all("a")}
+        except:
+            tags = None
+
+        return cls(url=url, text=text, tags=tags, similar=similar)
+
+
+def parse_news(date: str) -> pd.DataFrame:
     """
-    Parse article preview on newspage to extract title, link and time
+    Parses all articles on a newspage for a given date.
 
     Parameters
     ----------
-    article : bs4.tag
-        article tag to be parsed
+    date : str
+        A date in the format DD-MM-YYYY.
 
     Returns
     -------
-    title, link, time : Tuple
-        a tuple containing title, link and time of the article
+    df: pd.DataFrame
+        a dataframe of article metadata.
     """
 
-    title = article.a.text
-    link = article.a.get("href")
-    time = " ".join([x.text for x in article.find_all("span")])
+    # obtaining HTML page and checking the status code
+    response = requests.get(f"https://ua-energy.org/uk/news?date={date}")
+    response.raise_for_status()
 
-    return title, link, time
-
-
-def parse_news(link: str, use_date: bool = True):
-    """
-    Parses all articles on a newspage for a given date to produce a structured dataframe. Uses parse_articles.
-
-    Parameters
-    ----------
-    link : str
-        a full link to a newspage to be parsed or a date ('%d-%m-%Y') if use_date is True
-    use_date : bool
-        a flag indicating whether the provided link is a full link or just a date
-
-    Returns
-    -------
-    df_articles: pd.DataFrame
-        a dataframe of parsed articles with key information
-    """
-    if use_date:
-        link = f"https://ua-energy.org/uk/news?date={link}"
-
-    # Obtaining .html page and checking the status code
-    results = requests.get(link)
-    assert results.status_code == 200, f"HTTP Error Code: {results.status_code}"
-
-    # Locating news section and parsing the articles
-    soup = BeautifulSoup(results.content, features="html.parser")
+    # locating news section and parsing the articles
+    soup = BeautifulSoup(response.content, features="html.parser")
     news_section = soup.find_all("div", {"class": "wrap"})[1]
     articles = news_section.find_all("div", {"class": "article"})
-    df_articles = pd.DataFrame(
-        [parse_article(x) for x in articles], columns=["Title", "Link", "Date"]
-    )
-
-    return df_articles
-
-
-def get_article_content(link: str, add_root: bool = True, warnings: bool = False):
-    """
-    Parse a full article to extract basic information
-
-    Parameters
-    ----------
-    link : str
-        a link to a full article
-    add_root : bool
-        a flag whether to prefix the link with the root or not
-    warnings : bool
-        a flag whether to print a link if except clause is trigerred
-
-    Returns
-    -------
-    link, article_text, tags, read_also : Tuple
-        a tuple containing basic information from the article
-    """
-    if add_root:
-        link = "https://ua-energy.org" + link
-
-    results = requests.get(link)
-    assert results.status_code == 200, f"HTTP Error Code: {results.status_code}"
-
-    soup = BeautifulSoup(results.content, features="html.parser")
-    article_object = soup.find("div", {"class": "content-article-inner"})
-    if article_object is None:
-        if warnings:
-            print("No article found:", link)
-        return link, None, None, None
-
-    read_also = [
-        tag.a.get("href")
-        for tag in article_object.find_all("p")
-        if "ЧИТАЙТЕ ТАКОЖ" in tag.text and tag.find("a") is not None
-    ]
-    if len(read_also) == 0:
-        read_also = None
-
-    article_text = [
-        tag.text
-        for tag in article_object.find_all("p")
-        if not "ЧИТАЙТЕ ТАКОЖ" in tag.text
-    ]
-    article_text = " ".join(article_text)
-
-    try:
-        tags = article_object.find("div", {"class": "tags"})
-        tags = {tag.get("href"): tag.text for tag in tags.find_all("a")}
-    except:
-        if warnings:
-            print("No tags found:", link)
-        tags = None
-
-    return link, article_text, tags, read_also
+    df = pd.DataFrame(map(ArticleMetadata.from_tag, articles))
+    df = pd.DataFrame([ArticleContent.from_url(url) for url in df["url"]])
+    return df
 
 
 def replace_months(date: str):
