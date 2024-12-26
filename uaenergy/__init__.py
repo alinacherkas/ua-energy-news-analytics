@@ -3,6 +3,7 @@ Functions for scraping content from [UA-Energy.org](https://ua-energy.org).
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 
 import pandas as pd
 import requests
@@ -25,11 +26,48 @@ class Metadata:
         tag : Tag
             HTML tag of the article.
         """
+        date_str = " ".join([x.text for x in tag.find_all("span")])
         return cls(
             url=tag.a.get("href"),
             title=tag.a.text,
-            time=" ".join([x.text for x in tag.find_all("span")]),
+            time=cls.standardise_date(date_str),
         )
+
+    @staticmethod
+    def standardise_date(date: str) -> str:
+        """
+        Standardise an original date string into an ISO format.
+
+        Parameters
+        ----------
+        date : str
+            Publication date in Ukrainian.
+
+        Returns
+        -------
+        str
+            Date in ISO 8601 format (UTC+2).
+        """
+        months = {
+            "січня": "January",
+            "лютого": "February",
+            "березня": "March",
+            "квітня": "April",
+            "травня": "May",
+            "червня": "June",
+            "липня": "July",
+            "серпня": "August",
+            "вересня": "September",
+            "жовтня": "October",
+            "листопада": "November",
+            "грудня": "December",
+        }
+        for month_ua, month_en in months.items():
+            if month_ua in date:
+                date = date.replace(month_ua, month_en)
+                date = datetime.strptime(date, "%d %B %Y, %H:%M")
+                return date.isoformat()
+        raise ValueError(f"Did not find a match for {date}")
 
 
 @dataclass
@@ -126,37 +164,3 @@ def parse_news(date: str) -> pd.DataFrame:
     metadata_list = list(map(Metadata.from_tag, articles))
     df = pd.DataFrame([Article.from_metadata(metadata) for metadata in metadata_list])
     return df
-
-
-def replace_months(date: str):
-    """
-    Convert an original date string to a datetime object
-
-    Parameters
-    ----------
-    date : str
-        article tag to be parsed
-
-    Returns
-    -------
-    pd.to_datetime(date) : Timestamp
-        pandas timestamp object
-    """
-    months = {
-        "жовтня": "October",
-        "травня": "May",
-        "квітня": "April",
-        "листопада": "November",
-        "вересня": "September",
-        "березня": "March",
-        "серпня": "August",
-        "грудня": "December",
-        "липня": "July",
-        "лютого": "February",
-        "червня": "June",
-        "січня": "January",
-    }
-
-    ukr_month = date.split(" ")[1]
-    date = date.replace(ukr_month, months[ukr_month])
-    return pd.to_datetime(date)
