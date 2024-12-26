@@ -10,15 +10,15 @@ from bs4 import BeautifulSoup, Tag
 
 
 @dataclass
-class ArticleMetadata:
+class Metadata:
     url: str
     title: str
     time: str
 
     @classmethod
-    def from_tag(cls, tag: Tag) -> "ArticleMetadata":
+    def from_tag(cls, tag: Tag) -> "Metadata":
         """
-        Factory method to create an article from an HTML tag.
+        Factory method to create an article metadata from an HTML tag.
 
         Parameters
         ----------
@@ -33,24 +33,25 @@ class ArticleMetadata:
 
 
 @dataclass
-class ArticleContent:
-    url: str
+class Article(Metadata):
     text: str
     tags: list[str]
     similar: list[str]
 
     @classmethod
-    def from_url(cls, url: str) -> "ArticleContent":
+    def from_metadata(cls, metadata: Metadata) -> "Article":
         """
         Parse a full article to extract basic information
 
         Parameters
         ----------
-        url : str
-            A URL to a full article.
+        metadata : Metadata
+            Article metadata object.
         """
-        if not url.startswith("https"):
-            url = "https://ua-energy.org" + url
+        if not metadata.url.startswith("https"):
+            url = "https://ua-energy.org" + metadata.url
+        else:
+            url = metadata.url
 
         response = requests.get(url)
         response.raise_for_status()
@@ -58,7 +59,14 @@ class ArticleContent:
         soup = BeautifulSoup(response.content, features="html.parser")
         article_object = soup.find("div", {"class": "content-article-inner"})
         if article_object is None:
-            return cls(url=url, text=None, tags=None, similar=None)
+            return cls(
+                url=url,
+                text=None,
+                tags=None,
+                similar=None,
+                title=metadata.title,
+                time=metadata.time,
+            )
 
         similar = [
             tag.a.get("href")
@@ -82,7 +90,14 @@ class ArticleContent:
         except:
             tags = None
 
-        return cls(url=url, text=text, tags=tags, similar=similar)
+        return cls(
+            url=url,
+            text=text,
+            tags=tags,
+            similar=similar,
+            title=metadata.title,
+            time=metadata.time,
+        )
 
 
 def parse_news(date: str) -> pd.DataFrame:
@@ -108,8 +123,8 @@ def parse_news(date: str) -> pd.DataFrame:
     soup = BeautifulSoup(response.content, features="html.parser")
     news_section = soup.find_all("div", {"class": "wrap"})[1]
     articles = news_section.find_all("div", {"class": "article"})
-    df = pd.DataFrame(map(ArticleMetadata.from_tag, articles))
-    df = pd.DataFrame([ArticleContent.from_url(url) for url in df["url"]])
+    metadata_list = list(map(Metadata.from_tag, articles))
+    df = pd.DataFrame([Article.from_metadata(metadata) for metadata in metadata_list])
     return df
 
 
