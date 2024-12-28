@@ -73,9 +73,9 @@ class Metadata:
 
 @dataclass
 class Article(Metadata):
-    text: str
-    tags: list[str]
-    hrefs: list[str]
+    text: str | None = None
+    tags: list[str] | None = None
+    hrefs: list[str] | None = None
 
     @classmethod
     def from_metadata(cls, metadata: Metadata) -> "Article":
@@ -98,14 +98,7 @@ class Article(Metadata):
         soup = BeautifulSoup(response.content, features="html.parser")
         article_div = soup.find("div", {"class": "content-article-inner"})
         if article_div is None:
-            return cls(
-                url=url,
-                text=None,
-                tags=None,
-                hrefs=None,
-                title=metadata.title,
-                time=metadata.time,
-            )
+            return cls(url=url, title=metadata.title, time=metadata.time)
         pattern = re.compile("https://ua-energy.org/uk/posts/")
         hrefs = [tag.get("href") for tag in article_div.find_all("a", href=pattern)]
         paragraphs = [
