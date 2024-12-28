@@ -5,10 +5,13 @@ Functions for scraping content from [UA-Energy.org](https://ua-energy.org).
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from urllib.parse import urljoin
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup, Tag
+
+WEBSITE = "https://ua-energy.org"
 
 
 @dataclass
@@ -88,7 +91,7 @@ class Article(Metadata):
             Article metadata object.
         """
         if not metadata.url.startswith("https"):
-            url = "https://ua-energy.org" + metadata.url
+            url = urljoin(WEBSITE, metadata.url)
         else:
             url = metadata.url
 
@@ -99,7 +102,7 @@ class Article(Metadata):
         article_div = soup.find("div", {"class": "content-article-inner"})
         if article_div is None:
             return cls(url=url, title=metadata.title, time=metadata.time)
-        pattern = re.compile("https://ua-energy.org/uk/posts/")
+        pattern = re.compile(urljoin(WEBSITE, "uk/posts"))
         hrefs = [tag.get("href") for tag in article_div.find_all("a", href=pattern)]
         paragraphs = [
             tag.text
@@ -136,7 +139,7 @@ def parse_news(date: str) -> pd.DataFrame:
     """
 
     # obtaining HTML page and checking the status code
-    response = requests.get(f"https://ua-energy.org/uk/news?date={date}")
+    response = requests.get(urljoin(WEBSITE, "uk/news"), params={"date": date})
     response.raise_for_status()
 
     # locating news section and parsing the articles
