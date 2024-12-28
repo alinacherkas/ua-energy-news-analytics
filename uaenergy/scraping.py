@@ -88,7 +88,9 @@ class Article(Metadata):
     hrefs: Optional[list[str]] = None
 
     @classmethod
-    def from_metadata(cls, metadata: Metadata) -> "Article":
+    def from_metadata(
+        cls, metadata: Metadata, session: Optional[requests.Session] = None
+    ) -> "Article":
         """
         Parse a full article to extract basic information
 
@@ -96,13 +98,17 @@ class Article(Metadata):
         ----------
         metadata : Metadata
             Article metadata object.
+        session : requests.Session, optional
+            A `requests.Session` object to use for the request. If None, a
+            new session will be created. Default is None.
         """
         if not metadata.url.startswith("https"):
             url = urljoin(WEBSITE, metadata.url)
         else:
             url = metadata.url
 
-        response = requests.get(url)
+        request_func = requests.get if session is None else session.get
+        response = request_func(url)
         response.raise_for_status()
 
         soup = BeautifulSoup(response.content, features="html.parser")
@@ -130,7 +136,9 @@ class Article(Metadata):
         )
 
 
-def parse_news(date: str) -> pd.DataFrame | None:
+def parse_news(
+    date: str, session: Optional[requests.Session] = None
+) -> Optional[pd.DataFrame]:
     """
     Parses all articles on a newspage for a given date.
 
@@ -138,6 +146,9 @@ def parse_news(date: str) -> pd.DataFrame | None:
     ----------
     date : str
         A date in the format DD-MM-YYYY.
+    session : requests.Session, optional
+        A `requests.Session` object to use for the request. If None, a
+        new session will be created. Default is None.
 
     Returns
     -------
@@ -146,7 +157,8 @@ def parse_news(date: str) -> pd.DataFrame | None:
     """
 
     # obtaining HTML page and checking the status code
-    response = requests.get(urljoin(WEBSITE, "uk/news"), params={"date": date})
+    request_func = requests.get if session is None else session.get
+    response = request_func(urljoin(WEBSITE, "uk/news"), params={"date": date})
     if response.status_code == 404:
         return None
     response.raise_for_status()
@@ -156,7 +168,9 @@ def parse_news(date: str) -> pd.DataFrame | None:
     news_block = soup.find("h1", {"class": "title"}).next_sibling
     articles = news_block.find_all("div", {"class": "article"})
     metadata_list = list(map(Metadata.from_tag, articles))
-    df = pd.DataFrame([Article.from_metadata(metadata) for metadata in metadata_list])
+    df = pd.DataFrame(
+        [Article.from_metadata(metadata, session) for metadata in metadata_list]
+    )
     return df
 
 
@@ -205,8 +219,9 @@ if __name__ == "__main__":
 
     # scrape the news and save the dataset
     data = []
+    session = requests.Session()
     for date in tqdm(dates):
-        df = parse_news(date)
+        df = parse_news(date, session)
         if df is None:
             continue
         data.append(df)
