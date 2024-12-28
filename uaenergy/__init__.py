@@ -2,6 +2,7 @@
 Functions for scraping content from [UA-Energy.org](https://ua-energy.org).
 """
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -74,7 +75,7 @@ class Metadata:
 class Article(Metadata):
     text: str
     tags: list[str]
-    similar: list[str]
+    hrefs: list[str]
 
     @classmethod
     def from_metadata(cls, metadata: Metadata) -> "Article":
@@ -95,44 +96,32 @@ class Article(Metadata):
         response.raise_for_status()
 
         soup = BeautifulSoup(response.content, features="html.parser")
-        article_object = soup.find("div", {"class": "content-article-inner"})
-        if article_object is None:
+        article_div = soup.find("div", {"class": "content-article-inner"})
+        if article_div is None:
             return cls(
                 url=url,
                 text=None,
                 tags=None,
-                similar=None,
+                hrefs=None,
                 title=metadata.title,
                 time=metadata.time,
             )
-
-        similar = [
-            tag.a.get("href")
-            for tag in article_object.find_all("p")
-            if "ЧИТАЙТЕ ТАКОЖ" in tag.text and tag.find("a") is not None
+        pattern = re.compile("https://ua-energy.org/uk/posts/")
+        hrefs = [tag.get("href") for tag in article_div.find_all("a", href=pattern)]
+        paragraphs = [
+            tag.text
+            for tag in article_div.find_all("p")
+            if not "ЧИТАЙТЕ ТАКОЖ" in tag.text
         ]
-        if len(similar) == 0:
-            similar = None
-
-        text = " ".join(
-            [
-                tag.text
-                for tag in article_object.find_all("p")
-                if not "ЧИТАЙТЕ ТАКОЖ" in tag.text
-            ]
-        )
-
-        try:
-            tags = article_object.find("div", {"class": "tags"})
+        tags = article_div.find("div", {"class": "tags"})
+        if tags is not None:
             tags = {tag.get("href"): tag.text for tag in tags.find_all("a")}
-        except:
-            tags = None
 
         return cls(
             url=url,
-            text=text,
+            text=" ".join(paragraphs),
             tags=tags,
-            similar=similar,
+            hrefs=hrefs or None,
             title=metadata.title,
             time=metadata.time,
         )
