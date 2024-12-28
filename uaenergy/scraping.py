@@ -2,14 +2,18 @@
 Functions for scraping content from the website.
 """
 
+import os
 import re
+from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import datetime
+from random import shuffle
 from urllib.parse import urljoin
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup, Tag
+from tqdm import tqdm
 
 __all__ = ["WEBSITE", "parse_news"]
 
@@ -151,3 +155,56 @@ def parse_news(date: str) -> pd.DataFrame:
     metadata_list = list(map(Metadata.from_tag, articles))
     df = pd.DataFrame([Article.from_metadata(metadata) for metadata in metadata_list])
     return df
+
+
+if __name__ == "__main__":
+
+    # define the CLI
+    parser = ArgumentParser(description="An addition program")
+    parser.add_argument(
+        "-s",
+        "--start",
+        default="21-12-2020",
+        type=str,
+        help="The date to start scraping from in the format 'DD-MM-YYYY'.",
+    )
+    parser.add_argument(
+        "-e",
+        "--end",
+        default=datetime.today().strftime("%d-%m-%Y"),
+        type=str,
+        help="The date to scrape to in the format 'DD-MM-YYYY'.",
+    )
+    parser.add_argument(
+        "-p",
+        "--path",
+        default=os.curdir,
+        type=str,
+        help="Folder path to save the file to.",
+    )
+    parser.add_argument(
+        "-r",
+        "--random",
+        action="store_true",
+        help="Randomise the date order while scraping.",
+    )
+    args = parser.parse_args()
+
+    # ensure the path exist
+    if not os.path.exists(args.path):
+        raise FileNotFoundError(f"{args.path} directory does not exist")
+    file_path = os.path.join(args.path, f"ua-energy-news-{args.start}-{args.end}.jsonl")
+
+    # create and shuffle dates if needed
+    dates = pd.date_range(args.start, args.end, freq="D").strftime("%d-%m-%Y").tolist()
+    if args.random:
+        shuffle(dates)
+
+    # scrape the news and save the dataset
+    data = []
+    for date in tqdm(dates):
+        data.append(parse_news(date))
+    df = pd.concat(data, axis=0, ignore_index=True)
+    df.sort_values("time", ascending=True, ignore_index=True, inplace=True)
+    df.to_json(file_path, orient="records", lines=True)
+    print(f"Saved {len(df)} articles to {file_path}.")
