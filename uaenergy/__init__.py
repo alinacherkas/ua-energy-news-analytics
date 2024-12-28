@@ -159,8 +159,8 @@ def parse_news(date: str) -> pd.DataFrame:
 
     # locating news section and parsing the articles
     soup = BeautifulSoup(response.content, features="html.parser")
-    news_section = soup.find_all("div", {"class": "wrap"})[1]
-    articles = news_section.find_all("div", {"class": "article"})
+    news_block = soup.find("h1", {"class": "title"}).next_sibling
+    articles = news_block.find_all("div", {"class": "article"})
     metadata_list = list(map(Metadata.from_tag, articles))
     df = pd.DataFrame([Article.from_metadata(metadata) for metadata in metadata_list])
     return df
