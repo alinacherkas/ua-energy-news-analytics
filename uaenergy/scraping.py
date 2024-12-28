@@ -129,7 +129,7 @@ class Article(Metadata):
         )
 
 
-def parse_news(date: str) -> pd.DataFrame:
+def parse_news(date: str) -> pd.DataFrame | None:
     """
     Parses all articles on a newspage for a given date.
 
@@ -140,12 +140,14 @@ def parse_news(date: str) -> pd.DataFrame:
 
     Returns
     -------
-    df: pd.DataFrame
-        a dataframe of article metadata.
+    pd.DataFrame | None
+        a dataframe of article metadata or None if no news are published on that date.
     """
 
     # obtaining HTML page and checking the status code
     response = requests.get(urljoin(WEBSITE, "uk/news"), params={"date": date})
+    if response.status_code == 404:
+        return None
     response.raise_for_status()
 
     # locating news section and parsing the articles
@@ -203,7 +205,10 @@ if __name__ == "__main__":
     # scrape the news and save the dataset
     data = []
     for date in tqdm(dates):
-        data.append(parse_news(date))
+        df = parse_news(date)
+        if df is None:
+            continue
+        data.append(df)
     df = pd.concat(data, axis=0, ignore_index=True)
     df.sort_values("time", ascending=True, ignore_index=True, inplace=True)
     df.to_json(file_path, orient="records", lines=True)
