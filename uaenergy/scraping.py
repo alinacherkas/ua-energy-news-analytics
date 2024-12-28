@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import datetime
 from random import shuffle
+from typing import Optional
 from urllib.parse import urljoin
 
 import pandas as pd
@@ -82,9 +83,9 @@ class Metadata:
 
 @dataclass
 class Article(Metadata):
-    text: str | None = None
-    tags: list[str] | None = None
-    hrefs: list[str] | None = None
+    text: Optional[str] = None
+    tags: Optional[list[str]] = None
+    hrefs: Optional[list[str]] = None
 
     @classmethod
     def from_metadata(cls, metadata: Metadata) -> "Article":
