@@ -124,7 +124,7 @@ class Article(Metadata):
         ]
         tags = article_div.find("div", {"class": "tags"})
         if tags is not None:
-            tags = {tag.get("href"): tag.text for tag in tags.find_all("a")}
+            tags = [tag.text for tag in tags.find_all("a")]
 
         return cls(
             url=url,
