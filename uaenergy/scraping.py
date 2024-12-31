@@ -177,7 +177,7 @@ def parse_news(
 if __name__ == "__main__":
 
     # define the CLI
-    parser = ArgumentParser(description="An addition program")
+    parser = ArgumentParser(description="A web-scraper for UA-Energy.org.")
     parser.add_argument(
         "-s",
         "--start",
