@@ -210,14 +210,13 @@ if __name__ == "__main__":
     # ensure the path exist
     if not os.path.exists(args.path):
         raise FileNotFoundError(f"{args.path} directory does not exist")
-    file_path = os.path.join(args.path, f"ua-energy-news-{args.start}-{args.end}.jsonl")
 
     # create and shuffle dates if needed
     dates = pd.date_range(args.start, args.end, freq="D").strftime("%d-%m-%Y").tolist()
     if args.random:
         shuffle(dates)
 
-    # scrape the news and save the dataset
+    # scrape the news
     data = []
     session = requests.Session()
     for date in tqdm(dates):
@@ -227,5 +226,9 @@ if __name__ == "__main__":
         data.append(df)
     df = pd.concat(data, axis=0, ignore_index=True)
     df.sort_values("time", ascending=True, ignore_index=True, inplace=True)
-    df.to_json(file_path, orient="records", lines=True)
+
+    # save the dataset
+    file_name = f"ua-energy-news-{args.start}-{args.end}-raw.parquet.brotli"
+    file_path = os.path.join(args.path, file_name)
+    df.to_parquet(file_path, engine="fastparquet", compression="brotli")
     print(f"Saved {len(df)} articles to {file_path}.")
