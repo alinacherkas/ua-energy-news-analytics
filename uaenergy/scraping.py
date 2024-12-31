@@ -25,7 +25,7 @@ WEBSITE = "https://ua-energy.org"
 class Metadata:
     url: str
     title: str
-    time: str
+    date: datetime
 
     @classmethod
     def from_tag(cls, tag: Tag) -> "Metadata":
@@ -41,13 +41,13 @@ class Metadata:
         return cls(
             url=tag.a.get("href"),
             title=tag.a.text,
-            time=cls.standardise_date(date_str),
+            date=cls.standardise_date(date_str),
         )
 
     @staticmethod
-    def standardise_date(date: str) -> str:
+    def standardise_date(date: str) -> datetime:
         """
-        Standardise an original date string into an ISO format.
+        Standardise an original date string into a datatime object.
 
         Parameters
         ----------
@@ -56,8 +56,8 @@ class Metadata:
 
         Returns
         -------
-        str
-            Date in ISO 8601 format (UTC+2).
+        datetime
+            Publication date as a datetime object (UTC+2).
         """
         months = {
             "січня": "January",
@@ -77,7 +77,7 @@ class Metadata:
             if month_ua in date:
                 date = date.replace(month_ua, month_en)
                 date = datetime.strptime(date, "%d %B %Y, %H:%M")
-                return date.isoformat()
+                return date
         raise ValueError(f"Did not find a match for {date}")
 
 
@@ -114,7 +114,7 @@ class Article(Metadata):
         soup = BeautifulSoup(response.content, features="html.parser")
         article_div = soup.find("div", {"class": "content-article-inner"})
         if article_div is None:
-            return cls(url=url, title=metadata.title, time=metadata.time)
+            return cls(url=url, title=metadata.title, date=metadata.date)
         pattern = re.compile(urljoin(WEBSITE, "uk/posts"))
         hrefs = [tag.get("href") for tag in article_div.find_all("a", href=pattern)]
         paragraphs = [
@@ -132,7 +132,7 @@ class Article(Metadata):
             tags=tags,
             hrefs=hrefs or None,
             title=metadata.title,
-            time=metadata.time,
+            date=metadata.date,
         )
 
 
@@ -225,7 +225,7 @@ if __name__ == "__main__":
             continue
         data.append(df)
     df = pd.concat(data, axis=0, ignore_index=True)
-    df.sort_values("time", ascending=True, ignore_index=True, inplace=True)
+    df.sort_values("date", ascending=True, ignore_index=True, inplace=True)
 
     # save the dataset
     file_name = f"ua-energy-news-{args.start}-{args.end}-raw.parquet.brotli"
