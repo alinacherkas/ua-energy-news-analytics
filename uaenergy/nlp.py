@@ -2,15 +2,24 @@
 Functions for running natural language processing on website articles.
 """
 
+import os
+from dataclasses import asdict
+from pprint import pprint
 from typing import Optional
 
+import click
+import numpy as np
 import pandas as pd
 import requests
+import uk_core_news_sm
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import Pipeline
 from spacy.tokens import Doc
+from tqdm import tqdm
+
 from .items import NamedEntity, Topic
+from .openai import select_topic
 
 __all__ = [
     "extract_entities",
@@ -181,3 +190,64 @@ def extract_topics(pipe: Pipeline, n_features: int = 10) -> list[Topic]:
         topic = Topic(name=str(index), features=features)
         topics.append(topic)
     return topics
+
+
+@click.command(help="An NLP pipeline for UA-Energy.org.")
+@click.option(
+    "-p",
+    "--path",
+    type=str,
+    required=True,
+    help="File path to scraped news.",
+)
+@click.option(
+    "-n",
+    "--n-topics",
+    type=int,
+    default=[5, 7, 10],
+    multiple=True,
+    help="Values for the number of topics to try.",
+)
+def main(path, n_topics):
+
+    # ensure the path exist
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} file does not exist")
+    elif not "-raw" in path:
+        raise ValueError("The file name must contain '-raw'.")
+
+    print("Loading the model, stopwords and news data...")
+    nlp = uk_core_news_sm.load()
+    stopwords = get_stopwords()
+    df = pd.read_parquet(path, engine="fastparquet")
+
+    print("Converting to docs...")
+    docs = [doc for doc in tqdm(nlp.pipe(df["text"], batch_size=16))]
+    texts = list(map(lemmatise, docs))
+    print("Extracting named entities...")
+    df["entities"] = [list(map(asdict, extract_entities(doc))) for doc in tqdm(docs)]
+
+    print("Running topic models...")
+    topics, pipes = {}, {}
+    for n in tqdm(n_topics):
+        pipe = fit_lda(texts, n_topics=n, stopwords=stopwords)
+        topics[n] = extract_topics(pipe, n_features=25)
+        pipes[n] = pipe
+    # select the best topic model and assign topic names using OpenAI
+    topic_names = np.array(select_topic(topics))
+    n_topics = len(topic_names)
+    topics, pipe = topics[n_topics], pipes[n_topics]
+    print("Selected the model with {n_topics} topics")
+    for topic, name in zip(topics, topic_names):
+        topic.name = name
+    pprint(topics)
+
+    df["topic"] = topic_names[pipe.transform(texts).argmax(axis=1)]
+    path, name = os.path.split(path)
+    file_path = os.path.join(path, name.replace("-raw", "-processed"))
+    df.to_parquet(file_path, engine="fastparquet", compression="brotli")
+    print(f"Saved {len(df)} articles to {file_path}.")
+
+
+if __name__ == "__main__":
+    main()

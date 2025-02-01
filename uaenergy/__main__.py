@@ -4,6 +4,7 @@ A CLI interface for the package.
 
 import click
 
+from .nlp import main as cli_nlp
 from .scraping import main as cli_scraping
 
 
@@ -16,4 +17,5 @@ def cli():
 
 
 cli.add_command(cli_scraping, "scraping")
+cli.add_command(cli_nlp, "nlp")
 cli()
