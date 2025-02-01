@@ -4,4 +4,5 @@ from [UA-Energy.org](https://ua-energy.org)
 """
 
 from .nlp import *
+from .openai import *
 from .scraping import *
