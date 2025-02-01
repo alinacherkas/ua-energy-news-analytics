@@ -2,7 +2,6 @@
 Functions for running natural language processing on website articles.
 """
 
-from dataclasses import dataclass
 from typing import Optional
 
 import pandas as pd
@@ -11,6 +10,7 @@ from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import Pipeline
 from spacy.tokens import Doc
+from .items import NamedEntity, Topic
 
 __all__ = [
     "extract_entities",
@@ -19,28 +19,6 @@ __all__ = [
     "fit_lda",
     "extract_topics",
 ]
-
-
-@dataclass
-class NamedEntity:
-    """
-    Named entity object with context.
-    """
-
-    name: str
-    lemma: str
-    label: str
-    context: list[str]
-
-
-@dataclass
-class Topic:
-    """
-    News topic from a topic model.
-    """
-
-    name: str
-    features: list[str]
 
 
 def extract_entities(doc: Doc, context_size: int = 2) -> list[NamedEntity]:
