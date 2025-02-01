@@ -4,13 +4,13 @@ Functions for scraping content from the website.
 
 import os
 import re
-from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import datetime
 from random import shuffle
 from typing import Optional
 from urllib.parse import urljoin
 
+import click
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -174,46 +174,42 @@ def parse_news(
     return df
 
 
-if __name__ == "__main__":
-
-    # define the CLI
-    parser = ArgumentParser(description="A web-scraper for UA-Energy.org.")
-    parser.add_argument(
-        "-s",
-        "--start",
-        default="21-12-2020",
-        type=str,
-        help="The date to start scraping from in the format 'DD-MM-YYYY'.",
-    )
-    parser.add_argument(
-        "-e",
-        "--end",
-        default=datetime.today().strftime("%d-%m-%Y"),
-        type=str,
-        help="The date to scrape to in the format 'DD-MM-YYYY'.",
-    )
-    parser.add_argument(
-        "-p",
-        "--path",
-        default=os.curdir,
-        type=str,
-        help="Folder path to save the file to.",
-    )
-    parser.add_argument(
-        "-r",
-        "--random",
-        action="store_true",
-        help="Randomise the date order while scraping.",
-    )
-    args = parser.parse_args()
-
+@click.command(help="A web-scraper for UA-Energy.org.")
+@click.option(
+    "-s",
+    "--start",
+    default="21-12-2020",
+    type=str,
+    help="The date to start scraping from in the format 'DD-MM-YYYY'.",
+)
+@click.option(
+    "-e",
+    "--end",
+    default=datetime.today().strftime("%d-%m-%Y"),
+    type=str,
+    help="The date to scrape to in the format 'DD-MM-YYYY'.",
+)
+@click.option(
+    "-p",
+    "--path",
+    default=os.curdir,
+    type=str,
+    help="Folder path to save the file to.",
+)
+@click.option(
+    "-r",
+    "--random",
+    is_flag=True,
+    help="Randomise the date order while scraping.",
+)
+def main(start, end, path, random):
     # ensure the path exist
-    if not os.path.exists(args.path):
-        raise FileNotFoundError(f"{args.path} directory does not exist")
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} directory does not exist")
 
     # create and shuffle dates if needed
-    dates = pd.date_range(args.start, args.end, freq="D").strftime("%d-%m-%Y").tolist()
-    if args.random:
+    dates = pd.date_range(start, end, freq="D").strftime("%d-%m-%Y").tolist()
+    if random:
         shuffle(dates)
 
     # scrape the news
@@ -228,7 +224,11 @@ if __name__ == "__main__":
     df.sort_values("date", ascending=True, ignore_index=True, inplace=True)
 
     # save the dataset
-    file_name = f"ua-energy-news-{args.start}-{args.end}-raw.parquet.brotli"
-    file_path = os.path.join(args.path, file_name)
+    file_name = f"ua-energy-news-{start}-{end}-raw.parquet.brotli"
+    file_path = os.path.join(path, file_name)
     df.to_parquet(file_path, engine="fastparquet", compression="brotli")
     print(f"Saved {len(df)} articles to {file_path}.")
+
+
+if __name__ == "__main__":
+    main()
