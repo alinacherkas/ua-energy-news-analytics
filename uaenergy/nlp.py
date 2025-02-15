@@ -216,18 +216,18 @@ def main(path, n_topics):
     elif not "-raw" in path:
         raise ValueError("The file name must contain '-raw'.")
 
-    print("Loading the model, stopwords and news data...")
+    click.echo("Loading the model, stopwords and news data...")
     nlp = uk_core_news_sm.load()
     stopwords = get_stopwords()
     df = pd.read_parquet(path, engine="fastparquet")
 
-    print("Converting to docs...")
+    click.echo("Converting to docs...")
     docs = [doc for doc in tqdm(nlp.pipe(df["text"], batch_size=16))]
     texts = list(map(lemmatise, docs))
-    print("Extracting named entities...")
+    click.echo("Extracting named entities...")
     df["entities"] = [list(map(asdict, extract_entities(doc))) for doc in tqdm(docs)]
 
-    print("Running topic models...")
+    click.echo("Running topic models...")
     topics, pipes = {}, {}
     for n in tqdm(n_topics):
         pipe = fit_lda(texts, n_topics=n, stopwords=stopwords)
@@ -237,16 +237,16 @@ def main(path, n_topics):
     topic_names = np.array(select_topic(topics))
     n_topics = len(topic_names)
     topics, pipe = topics[n_topics], pipes[n_topics]
-    print("Selected the model with {n_topics} topics")
+    click.echo("Selected the model with {n_topics} topics")
     for topic, name in zip(topics, topic_names):
         topic.name = name
-    pprint(topics)
+    click.echo(pprint(topics))
 
     df["topic"] = topic_names[pipe.transform(texts).argmax(axis=1)]
     path, name = os.path.split(path)
     file_path = os.path.join(path, name.replace("-raw", "-processed"))
     df.to_parquet(file_path, engine="fastparquet", compression="brotli")
-    print(f"Saved {len(df)} articles to {file_path}.")
+    click.echo(f"Saved {len(df)} articles to {file_path}.")
 
 
 if __name__ == "__main__":

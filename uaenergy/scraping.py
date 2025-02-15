@@ -110,7 +110,7 @@ def main(start, end, path, random):
     file_name = f"ua-energy-news-{start}-{end}-raw.parquet.brotli"
     file_path = os.path.join(path, file_name)
     df.to_parquet(file_path, engine="fastparquet", compression="brotli")
-    print(f"Saved {len(df)} articles to {file_path}.")
+    click.echo(f"Saved {len(df)} articles to {file_path}.")
 
 
 if __name__ == "__main__":
