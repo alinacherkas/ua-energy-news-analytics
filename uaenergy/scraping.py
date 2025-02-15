@@ -14,7 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-from .items import Article, Metadata, WEBSITE
+from .items import WEBSITE, Article, Metadata
 
 __all__ = ["parse_news"]
 

@@ -11,7 +11,6 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup, Tag
 
-
 __all__ = ["WEBSITE", "Metadata", "Article", "NamedEntity", "Topic"]
 
 WEBSITE = "https://ua-energy.org"
