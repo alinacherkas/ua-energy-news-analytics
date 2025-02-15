@@ -219,7 +219,7 @@ def main(path, n_topics):
     click.echo("Loading the model, stopwords and news data...")
     nlp = uk_core_news_sm.load()
     stopwords = get_stopwords()
-    df = pd.read_parquet(path, engine="fastparquet")
+    df = pd.read_parquet(path, engine="fastparquet").sample(1000)
 
     click.echo("Converting to docs...")
     docs = [doc for doc in tqdm(nlp.pipe(df["text"], batch_size=16))]
@@ -242,7 +242,20 @@ def main(path, n_topics):
         topic.name = name
     click.echo(pprint(topics))
 
+    click.echo("Assigning topics...")
     df["topic"] = topic_names[pipe.transform(texts).argmax(axis=1)]
+
+    click.echo("Removing infrequent tags...")
+    tags_count = df["tags"].explode().value_counts()
+    tags = set(tags_count[tags_count.gt(5)].index)
+    df["tags"] = df["tags"].map(
+        lambda values: (
+            [value for value in values if value in tags] or None
+            if values is not None
+            else None
+        )
+    )
+
     path, name = os.path.split(path)
     file_path = os.path.join(path, name.replace("-raw", "-processed"))
     df.to_parquet(file_path, engine="fastparquet", compression="brotli")
