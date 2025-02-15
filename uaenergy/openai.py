@@ -9,7 +9,7 @@ from openai import OpenAI
 
 from .nlp import Topic
 
-__all__ = ["ask_gpt", "select_topic"]
+__all__ = ["ask_gpt", "select_topic", "translate_tags"]
 
 
 class Prompts(StrEnum):
@@ -26,6 +26,14 @@ class Prompts(StrEnum):
         "Your inputs are models with a different number of topics. "
         "You must output a list of topic names for the model with the most coherent and relevant topics. "
         "The output must be an object containing topic names (that you come up with) with their corresponding topic features."
+    )
+    TRANSLATE_TAGS = (
+        "You are a professional Ukrainian-English translator specialising in energy news. "
+        "You work on translating tags of energy news articles from a website in Ukraine. "
+        "Your task is to accurately and clearly translate a list of tags from Ukrainian to English. "
+        "When translating acronyms or abbreviations, spell them out. "
+        "Your input is a list of tags. "
+        "You must output an object containing tags translated to English."
     )
 
 
@@ -118,3 +126,51 @@ def select_topic(model_topics: dict[int, list[Topic]]) -> list[str]:
     response = ask_gpt(message, Prompts.SELECT_TOPIC, response_format=response_format)
     response = json.loads(response)
     return response["topic_names"]
+
+
+def translate_tags(tags: list[str]) -> list[str]:
+    """
+    Translate a list of tags from Ukrainian to English.
+
+    The function makes use of structured outputs. See
+    https://platform.openai.com/docs/guides/structured-outputs
+
+    Parameters
+    ----------
+    tags : list[str]
+        A list of tags in Ukrainian.
+
+    Returns
+    -------
+    list[str]
+        A list of tags translated to English.
+    """
+    # define a JSON schema
+    schema = {
+        "properties": {
+            "translations": {
+                "description": "A list of translated tags in English",
+                "items": {"type": "string"},
+                "title": "English tags",
+                "type": "array",
+            }
+        },
+        "required": ["translations"],
+        "title": "Output",
+        "type": "object",
+        "additionalProperties": False,
+    }
+    # use the schema to define the response format
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "tags_response",
+            "schema": schema,
+            "strict": True,
+        },
+    }
+    # construct an input message using Markdown
+    message = json.dumps(tags, indent=2, ensure_ascii=False)
+    response = ask_gpt(message, Prompts.TRANSLATE_TAGS, response_format=response_format)
+    response = json.loads(response)
+    return response["translations"]

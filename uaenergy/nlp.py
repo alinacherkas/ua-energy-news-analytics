@@ -18,8 +18,8 @@ from sklearn.pipeline import Pipeline
 from spacy.tokens import Doc
 from tqdm import tqdm
 
+from . import openai as ai
 from .items import NamedEntity, Topic
-from .openai import select_topic
 
 __all__ = [
     "extract_entities",
@@ -234,7 +234,7 @@ def main(path, n_topics):
         topics[n] = extract_topics(pipe, n_features=25)
         pipes[n] = pipe
     # select the best topic model and assign topic names using OpenAI
-    topic_names = np.array(select_topic(topics))
+    topic_names = np.array(ai.select_topic(topics))
     n_topics = len(topic_names)
     topics, pipe = topics[n_topics], pipes[n_topics]
     click.echo("Selected the model with {n_topics} topics")
@@ -245,17 +245,28 @@ def main(path, n_topics):
     click.echo("Assigning topics...")
     df["topic"] = topic_names[pipe.transform(texts).argmax(axis=1)]
 
-    click.echo("Removing infrequent tags...")
+    click.echo("Cleaning and translating tags...")
     tags_count = df["tags"].explode().value_counts()
-    tags = set(tags_count[tags_count.gt(5)].index)
-    df["tags"] = df["tags"].map(
-        lambda values: (
-            [value for value in values if value in tags] or None
-            if values is not None
+    tags_uk = set(tags_count[tags_count.gt(5)].index)
+    tags_en = ai.translate_tags(list(tags_uk))
+    if len(tags_uk) != len(tags_en):
+        click.echo("Tags translation is likely incorrect, please try again.", err=True)
+    tags_translations = dict(zip(tags_uk, tags_en))
+    df["tags_uk"] = df["tags"].map(
+        lambda tags: (
+            [tag for tag in tags if tag in tags_uk] or None
+            if tags is not None
             else None
         )
     )
+    df["tags_en"] = df["tags_uk"].map(
+        lambda tags: (
+            [tags_translations[tag] for tag in tags] if tags is not None else None
+        )
+    )
+    df.drop(columns=["tags"], inplace=True)
 
+    click.echo("Saving data...")
     path, name = os.path.split(path)
     file_path = os.path.join(path, name.replace("-raw", "-processed"))
     df.to_parquet(file_path, engine="fastparquet", compression="brotli")
