@@ -15,8 +15,8 @@ import requests
 import uk_core_news_sm
 from tqdm import tqdm
 
-from . import openai as ai
 from .nlp import extract_entities, extract_topics, fit_lda, get_stopwords, lemmatise
+from .openai import select_topic, translate_tags, translate_topics
 from .scraping import parse_news
 
 
@@ -126,7 +126,7 @@ def nlp(path, n_topics):
         topics[n] = extract_topics(pipe, n_features=25)
         pipes[n] = pipe
     # select the best topic model and assign topic names using OpenAI
-    topic_names = np.array(ai.select_topic(topics))
+    topic_names = np.array(select_topic(topics))
     n_topics = len(topic_names)
     topics, pipe = topics[n_topics], pipes[n_topics]
     click.echo(f"Selected the model with {n_topics} topics")
@@ -135,12 +135,16 @@ def nlp(path, n_topics):
     click.echo(pprint(topics))
 
     click.echo("Assigning topics...")
-    df["topic"] = topic_names[pipe.transform(texts).argmax(axis=1)]
+    topics = [topic.name for topic in topics]
+    mapping = dict(zip(topics, translate_topics(topics)))
+    click.echo(pprint(mapping))
+    df["topic_uk"] = topic_names[pipe.transform(texts).argmax(axis=1)]
+    df["topic_en"] = df["topic_uk"].map(mapping)
 
     click.echo("Cleaning and translating tags...")
     tags_count = df["tags"].explode().value_counts()
     tags_uk = set(tags_count[tags_count.gt(5)].index)
-    tags_en = ai.translate_tags(list(tags_uk))
+    tags_en = translate_tags(list(tags_uk))
     if len(tags_uk) != len(tags_en):
         click.echo("Tags translation is likely incorrect, please try again.", err=True)
     tags_translations = dict(zip(tags_uk, tags_en))

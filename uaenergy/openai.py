@@ -10,7 +10,7 @@ from openai import OpenAI
 
 from .items import Topic
 
-__all__ = ["ask_gpt", "select_topic", "translate_tags"]
+__all__ = ["ask_gpt", "select_topic", "translate_topics", "translate_tags"]
 
 
 with files("uaenergy").joinpath("prompts.yaml").open() as file:
@@ -108,6 +108,56 @@ def select_topic(model_topics: dict[int, list[Topic]]) -> list[str]:
     )
     response = json.loads(response)
     return response["topic_names"]
+
+
+def translate_topics(topics: list[str]) -> list[str]:
+    """
+    Translate a list of topics from Ukrainian to English.
+
+    The function makes use of structured outputs. See
+    https://platform.openai.com/docs/guides/structured-outputs
+
+    Parameters
+    ----------
+    topics : list[str]
+        A list of topics in Ukrainian.
+
+    Returns
+    -------
+    list[str]
+        A list of topics translated to English.
+    """
+    # define a JSON schema
+    schema = {
+        "properties": {
+            "translations": {
+                "description": "A list of translated topics in English",
+                "items": {"type": "string"},
+                "title": "English topics",
+                "type": "array",
+            }
+        },
+        "required": ["translations"],
+        "title": "Output",
+        "type": "object",
+        "additionalProperties": False,
+    }
+    # use the schema to define the response format
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "topics_response",
+            "schema": schema,
+            "strict": True,
+        },
+    }
+    # construct an input message using Markdown
+    message = json.dumps(topics, indent=2, ensure_ascii=False)
+    response = ask_gpt(
+        message, PROMPTS["translate_topics"], response_format=response_format
+    )
+    response = json.loads(response)
+    return response["translations"]
 
 
 def translate_tags(tags: list[str]) -> list[str]:

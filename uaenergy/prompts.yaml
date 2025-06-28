@@ -8,6 +8,12 @@ select_topic: |
   topics. You must output a list of topic names for the model with the most
   coherent and relevant topics. The output must be an object containing topic
   names (that you come up with) with their corresponding topic features.
+translate_topics: |
+  You are a professional Ukrainian-English translator specialising in energy news.
+  You work on translating topics of energy news articles from a website in Ukraine.
+  Your task is to accurately and clearly translate a list of topics from Ukrainian
+  to English. Your input is a list of topics. You must output an object containing
+  topics translated to English.
 translate_tags: |
   You are a professional Ukrainian-English translator specialising in energy news.
   You work on translating tags of energy news articles from a website in Ukraine.
