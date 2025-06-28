@@ -2,10 +2,22 @@
 A CLI interface for the package.
 """
 
-import click
+import os
+from dataclasses import asdict
+from datetime import datetime
+from pprint import pprint
+from random import shuffle
 
-from .nlp import main as cli_nlp
-from .scraping import main as cli_scraping
+import click
+import numpy as np
+import pandas as pd
+import requests
+import uk_core_news_sm
+from tqdm import tqdm
+
+from . import openai as ai
+from .nlp import extract_entities, extract_topics, fit_lda, get_stopwords, lemmatise
+from .scraping import parse_news
 
 
 @click.group()
@@ -16,6 +28,142 @@ def cli():
     pass
 
 
-cli.add_command(cli_scraping, "scraping")
-cli.add_command(cli_nlp, "nlp")
-cli()
+@cli.command(help="A web-scraper for UA-Energy.org.")
+@click.option(
+    "-s",
+    "--start",
+    default="21-12-2020",
+    type=str,
+    help="The date to start scraping from in the format 'DD-MM-YYYY'.",
+)
+@click.option(
+    "-e",
+    "--end",
+    default=datetime.today().strftime("%d-%m-%Y"),
+    type=str,
+    help="The date to scrape to in the format 'DD-MM-YYYY'.",
+)
+@click.option(
+    "-p",
+    "--path",
+    default=os.curdir,
+    type=str,
+    help="Folder path to save the file to.",
+)
+@click.option(
+    "-r",
+    "--random",
+    is_flag=True,
+    help="Randomise the date order while scraping.",
+)
+def scraping(start, end, path, random):
+    # ensure the path exist
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} directory does not exist")
+
+    # create and shuffle dates if needed
+    dates = pd.date_range(start, end, freq="D").strftime("%d-%m-%Y").tolist()
+    if random:
+        shuffle(dates)
+
+    # scrape the news
+    data = []
+    session = requests.Session()
+    for date in tqdm(dates):
+        df = parse_news(date, session)
+        if df is None:
+            continue
+        data.append(df)
+    df = pd.concat(data, axis=0, ignore_index=True)
+    df.sort_values("date", ascending=True, ignore_index=True, inplace=True)
+
+    # save the dataset
+    file_name = f"ua-energy-news-{start}-{end}-raw.parquet.brotli"
+    file_path = os.path.join(path, file_name)
+    df.to_parquet(file_path, engine="fastparquet", compression="brotli")
+    click.echo(f"Saved {len(df)} articles to {file_path}.")
+
+
+@cli.command(help="An NLP pipeline for UA-Energy.org.")
+@click.option(
+    "-p",
+    "--path",
+    type=str,
+    required=True,
+    help="File path to scraped news.",
+)
+@click.option(
+    "-n",
+    "--n-topics",
+    type=int,
+    default=[5, 7, 10],
+    multiple=True,
+    help="Values for the number of topics to try.",
+)
+def nlp(path, n_topics):
+
+    # ensure the path exist
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} file does not exist")
+    elif not "-raw" in path:
+        raise ValueError("The file name must contain '-raw'.")
+
+    click.echo("Loading the model, stopwords and news data...")
+    nlp = uk_core_news_sm.load()
+    stopwords = get_stopwords()
+    df = pd.read_parquet(path, engine="fastparquet").sample(1000)
+
+    click.echo("Converting to docs...")
+    docs = [doc for doc in tqdm(nlp.pipe(df["text"], batch_size=16))]
+    texts = list(map(lemmatise, docs))
+    click.echo("Extracting named entities...")
+    df["entities"] = [list(map(asdict, extract_entities(doc))) for doc in tqdm(docs)]
+
+    click.echo("Running topic models...")
+    topics, pipes = {}, {}
+    for n in tqdm(n_topics):
+        pipe = fit_lda(texts, n_topics=n, stopwords=stopwords)
+        topics[n] = extract_topics(pipe, n_features=25)
+        pipes[n] = pipe
+    # select the best topic model and assign topic names using OpenAI
+    topic_names = np.array(ai.select_topic(topics))
+    n_topics = len(topic_names)
+    topics, pipe = topics[n_topics], pipes[n_topics]
+    click.echo("Selected the model with {n_topics} topics")
+    for topic, name in zip(topics, topic_names):
+        topic.name = name
+    click.echo(pprint(topics))
+
+    click.echo("Assigning topics...")
+    df["topic"] = topic_names[pipe.transform(texts).argmax(axis=1)]
+
+    click.echo("Cleaning and translating tags...")
+    tags_count = df["tags"].explode().value_counts()
+    tags_uk = set(tags_count[tags_count.gt(5)].index)
+    tags_en = ai.translate_tags(list(tags_uk))
+    if len(tags_uk) != len(tags_en):
+        click.echo("Tags translation is likely incorrect, please try again.", err=True)
+    tags_translations = dict(zip(tags_uk, tags_en))
+    df["tags_uk"] = df["tags"].map(
+        lambda tags: (
+            [tag for tag in tags if tag in tags_uk] or None
+            if tags is not None
+            else None
+        )
+    )
+    df["tags_en"] = df["tags_uk"].map(
+        lambda tags: (
+            [tags_translations[tag] for tag in tags] if tags is not None else None
+        )
+    )
+    df.drop(columns=["tags"], inplace=True)
+
+    click.echo("Saving data...")
+    path, name = os.path.split(path)
+    file_path = os.path.join(path, name.replace("-raw", "-processed"))
+    df.to_parquet(file_path, engine="fastparquet", compression="brotli")
+    click.echo(f"Saved {len(df)} articles to {file_path}.")
+
+
+if __name__ == "__main__":
+    cli()
