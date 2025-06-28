@@ -68,12 +68,12 @@ def scraping(start, end, path, random):
 
     # scrape the news
     data = []
-    session = requests.Session()
-    for date in tqdm(dates):
-        df = parse_news(date, session)
-        if df is None:
-            continue
-        data.append(df)
+    with requests.Session() as session:
+        for date in tqdm(dates):
+            df = parse_news(date, session)
+            if df is None:
+                continue
+            data.append(df)
     df = pd.concat(data, axis=0, ignore_index=True)
     df.sort_values("date", ascending=True, ignore_index=True, inplace=True)
 
