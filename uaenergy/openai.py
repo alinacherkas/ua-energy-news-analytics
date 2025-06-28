@@ -1,10 +1,11 @@
 """
-Module for interacting with OpenAI to analyse energy news. 
+Module for interacting with OpenAI to analyse energy news.
 """
 
 import json
-from enum import StrEnum
+from importlib.resources import files
 
+import yaml
 from openai import OpenAI
 
 from .items import Topic
@@ -12,29 +13,8 @@ from .items import Topic
 __all__ = ["ask_gpt", "select_topic", "translate_tags"]
 
 
-class Prompts(StrEnum):
-    """
-    System prompts for OpenAI models.
-    """
-
-    SELECT_TOPIC = (
-        "You are a natural language processing expert with a focus on news. "
-        "You work on topic modelling of energy news in Ukraine, helping to choose among multiple models. "
-        "Your task is two-fold. "
-        "Firstly, select the topic model that produced the most coherent and relevant set of topics. "
-        "Secondly, for each topic in that model, come up with a short and descriptive name in Ukrainian of no more than 5 words. "
-        "Your inputs are models with a different number of topics. "
-        "You must output a list of topic names for the model with the most coherent and relevant topics. "
-        "The output must be an object containing topic names (that you come up with) with their corresponding topic features."
-    )
-    TRANSLATE_TAGS = (
-        "You are a professional Ukrainian-English translator specialising in energy news. "
-        "You work on translating tags of energy news articles from a website in Ukraine. "
-        "Your task is to accurately and clearly translate a list of tags from Ukrainian to English. "
-        "When translating acronyms or abbreviations, spell them out. "
-        "Your input is a list of tags. "
-        "You must output an object containing tags translated to English."
-    )
+with files("uaenergy").joinpath("prompts.yaml").open() as file:
+    PROMPTS = yaml.safe_load(file)
 
 
 def ask_gpt(text: str, prompt: str, **kwargs) -> str:
@@ -123,7 +103,9 @@ def select_topic(model_topics: dict[int, list[Topic]]) -> list[str]:
             ensure_ascii=False,
         )
         message += f"```json\n{topics}\n```\n"
-    response = ask_gpt(message, Prompts.SELECT_TOPIC, response_format=response_format)
+    response = ask_gpt(
+        message, PROMPTS["select_topic"], response_format=response_format
+    )
     response = json.loads(response)
     return response["topic_names"]
 
@@ -171,6 +153,8 @@ def translate_tags(tags: list[str]) -> list[str]:
     }
     # construct an input message using Markdown
     message = json.dumps(tags, indent=2, ensure_ascii=False)
-    response = ask_gpt(message, Prompts.TRANSLATE_TAGS, response_format=response_format)
+    response = ask_gpt(
+        message, PROMPTS["translate_tags"], response_format=response_format
+    )
     response = json.loads(response)
     return response["translations"]
