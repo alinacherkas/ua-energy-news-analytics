@@ -5,6 +5,7 @@ A CLI interface for the package.
 import os
 from dataclasses import asdict
 from datetime import datetime
+from pathlib import Path
 from pprint import pprint
 from random import shuffle
 
@@ -30,24 +31,22 @@ def cli():
 
 @cli.command(help="Web-scrape news articles from UA-Energy.org.")
 @click.option(
-    "-s",
-    "--start",
-    default="21-12-2020",
-    type=str,
-    help="The date to start scraping from in the format 'DD-MM-YYYY'.",
+    "--date-start",
+    default="2020-12-21",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="Scrape articles published since this date.",
 )
 @click.option(
-    "-e",
-    "--end",
-    default=datetime.today().strftime("%d-%m-%Y"),
-    type=str,
-    help="The date to scrape to in the format 'DD-MM-YYYY'.",
+    "--date-end",
+    default=datetime.today(),
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    help="Scrape articles published before this date.",
 )
 @click.option(
     "-p",
     "--path",
     default=os.curdir,
-    type=str,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
     help="Folder path to save the file to.",
 )
 @click.option(
@@ -56,13 +55,9 @@ def cli():
     is_flag=True,
     help="Randomise the date order while scraping.",
 )
-def scrape(start, end, path, random):
-    # ensure the path exist
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} directory does not exist")
-
+def scrape(date_start, date_end, path, random):
     # create and shuffle dates if needed
-    dates = pd.date_range(start, end, freq="D").strftime("%d-%m-%Y").tolist()
+    dates = pd.date_range(date_start, date_end, freq="D").strftime("%d-%m-%Y").tolist()
     if random:
         shuffle(dates)
 
@@ -78,19 +73,18 @@ def scrape(start, end, path, random):
     df.sort_values("date", ascending=True, ignore_index=True, inplace=True)
 
     # save the dataset
-    file_name = f"ua-energy-news-{start}-{end}-raw.parquet.brotli"
-    file_path = os.path.join(path, file_name)
+    file_name = (
+        f"ua-energy-news-{date_start:%Y-%m-%d}-{date_end:%Y-%m-%d}-raw.parquet.brotli"
+    )
+    file_path = path.joinpath(file_name)
     df.to_parquet(file_path, engine="fastparquet", compression="brotli")
     click.echo(f"Saved {len(df)} articles to {file_path}.")
 
 
-@cli.command(help="Process scraped articles using an NLP pipeline.")
-@click.option(
-    "-p",
-    "--path",
-    type=str,
-    required=True,
-    help="File path to scraped news.",
+@cli.command()
+@click.argument(
+    "path",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
 )
 @click.option(
     "-n",
@@ -101,11 +95,12 @@ def scrape(start, end, path, random):
     help="Values for the number of topics to try.",
 )
 def process(path, n_topics):
+    """
+    Process scraped articles using an NLP pipeline.
 
-    # ensure the path exist
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} file does not exist")
-    elif not "-raw" in path:
+    PATH: File path to scraped news.
+    """
+    if not "-raw" in path.name:
         raise ValueError("The file name must contain '-raw'.")
 
     click.echo("Loading the model, stopwords and news data...")
@@ -163,8 +158,7 @@ def process(path, n_topics):
     df.drop(columns=["tags"], inplace=True)
 
     click.echo("Saving data...")
-    path, name = os.path.split(path)
-    file_path = os.path.join(path, name.replace("-raw", "-processed"))
+    file_path = path.with_name(path.name.replace("-raw", "-processed"))
     df.to_parquet(file_path, engine="fastparquet", compression="brotli")
     click.echo(f"Saved {len(df)} articles to {file_path}.")
 
