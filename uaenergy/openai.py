@@ -7,7 +7,7 @@ from enum import StrEnum
 
 from openai import OpenAI
 
-from .nlp import Topic
+from .items import Topic
 
 __all__ = ["ask_gpt", "select_topic", "translate_tags"]
 
