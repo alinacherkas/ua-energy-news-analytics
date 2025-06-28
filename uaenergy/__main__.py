@@ -129,7 +129,7 @@ def nlp(path, n_topics):
     topic_names = np.array(ai.select_topic(topics))
     n_topics = len(topic_names)
     topics, pipe = topics[n_topics], pipes[n_topics]
-    click.echo("Selected the model with {n_topics} topics")
+    click.echo(f"Selected the model with {n_topics} topics")
     for topic, name in zip(topics, topic_names):
         topic.name = name
     click.echo(pprint(topics))
