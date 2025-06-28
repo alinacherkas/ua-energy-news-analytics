@@ -23,12 +23,12 @@ from .scraping import parse_news
 @click.group()
 def cli():
     """
-    Combined CLI for uaenergy for scraping and text mining.
+    A CLI for scraping and processing energy news from https://ua-energy.org.
     """
     pass
 
 
-@cli.command(help="A web-scraper for UA-Energy.org.")
+@cli.command(help="Web-scrape news articles from UA-Energy.org.")
 @click.option(
     "-s",
     "--start",
@@ -56,7 +56,7 @@ def cli():
     is_flag=True,
     help="Randomise the date order while scraping.",
 )
-def scraping(start, end, path, random):
+def scrape(start, end, path, random):
     # ensure the path exist
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} directory does not exist")
@@ -84,7 +84,7 @@ def scraping(start, end, path, random):
     click.echo(f"Saved {len(df)} articles to {file_path}.")
 
 
-@cli.command(help="An NLP pipeline for UA-Energy.org.")
+@cli.command(help="Process scraped articles using an NLP pipeline.")
 @click.option(
     "-p",
     "--path",
@@ -100,7 +100,7 @@ def scraping(start, end, path, random):
     multiple=True,
     help="Values for the number of topics to try.",
 )
-def nlp(path, n_topics):
+def process(path, n_topics):
 
     # ensure the path exist
     if not os.path.exists(path):
