@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 import requests
 import uk_core_news_sm
-from tqdm import tqdm
 
 from .nlp import extract_entities, extract_topics, fit_lda, get_stopwords, lemmatise
 from .openai import select_topic, translate_tags, translate_topics
@@ -64,11 +63,14 @@ def scrape(date_start, date_end, path, random):
     # scrape the news
     data = []
     with requests.Session() as session:
-        for date in tqdm(dates):
-            df = parse_news(date, session)
-            if df is None:
-                continue
-            data.append(df)
+        with click.progressbar(dates, label="Scraping articles...") as bar:
+            for date in bar:
+                bar.label = f"Scraping articles ({date})"
+                df = parse_news(date, session)
+                if df is None:
+                    continue
+                data.append(df)
+
     df = pd.concat(data, axis=0, ignore_index=True)
     df.sort_values("date", ascending=True, ignore_index=True, inplace=True)
 
@@ -108,18 +110,19 @@ def process(path, n_topics):
     stopwords = get_stopwords()
     df = pd.read_parquet(path, engine="fastparquet")
 
-    click.echo("Converting to docs...")
-    docs = [doc for doc in tqdm(nlp.pipe(df["text"], batch_size=16))]
-    texts = list(map(lemmatise, docs))
-    click.echo("Extracting named entities...")
-    df["entities"] = [list(map(asdict, extract_entities(doc))) for doc in tqdm(docs)]
+    pipe = nlp.pipe(df["text"], batch_size=16)
+    with click.progressbar(pipe, length=len(df), label="Converting to docs") as bar:
+        docs = [doc for doc in bar]
+    with click.progressbar(docs, label="Extracting named entities") as bar:
+        df["entities"] = [list(map(asdict, extract_entities(doc))) for doc in bar]
 
-    click.echo("Running topic models...")
+    texts = list(map(lemmatise, docs))
     topics, pipes = {}, {}
-    for n in tqdm(n_topics):
-        pipe = fit_lda(texts, n_topics=n, stopwords=stopwords)
-        topics[n] = extract_topics(pipe, n_features=25)
-        pipes[n] = pipe
+    with click.progressbar(n_topics, label="Running topic models") as bar:
+        for n in bar:
+            pipe = fit_lda(texts, n_topics=n, stopwords=stopwords)
+            topics[n] = extract_topics(pipe, n_features=25)
+            pipes[n] = pipe
     # select the best topic model and assign topic names using OpenAI
     topic_names = np.array(select_topic(topics))
     n_topics = len(topic_names)
