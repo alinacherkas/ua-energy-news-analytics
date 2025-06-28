@@ -111,7 +111,7 @@ def nlp(path, n_topics):
     click.echo("Loading the model, stopwords and news data...")
     nlp = uk_core_news_sm.load()
     stopwords = get_stopwords()
-    df = pd.read_parquet(path, engine="fastparquet").sample(1000)
+    df = pd.read_parquet(path, engine="fastparquet")
 
     click.echo("Converting to docs...")
     docs = [doc for doc in tqdm(nlp.pipe(df["text"], batch_size=16))]
