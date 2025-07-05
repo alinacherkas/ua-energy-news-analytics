@@ -1,0 +1,59 @@
+--- 
+title: "UA-Energy News Analytics"
+author: "Alina Cherkas"
+format:
+    dashboard:
+        nav-buttons:
+            - icon: github
+              href: https://github.com/alinacherkas/ua-energy-news-analytics
+--- 
+
+```{python}
+import altair as alt
+import pandas as pd
+df_news = pd.read_parquet('https://cv4ld.blob.core.windows.net/public/ua-energy-news-processed.parquet', engine='fastparquet')
+```
+
+## Row {height=30%}
+
+```{python}
+#| content: valuebox
+#| title: "Date Coverage"
+#| icon: calendar3
+#| color: light
+{'value': f'{df_news.date.min():%B %d, %Y}-{df_news.date.max():%B %d, %Y}'}
+```
+
+```{python}
+#| content: valuebox
+#| title: "Number of Articles"
+#| icon: newspaper
+#| color: light
+{'value': f'{len(df_news):,}'}
+```
+
+```{python}
+#| content: valuebox
+#| title: "Number of Topics"
+#| icon: bar-chart-steps
+#| color: light
+{'value': df_news.topic_uk.nunique()}
+```
+
+```{python}
+#| content: valuebox
+#| title: "Number of Tags"
+#| icon: tag
+#| color: light
+{'value': df_news.tags_uk.explode().nunique()}
+```
+
+## Row {height=70%}
+
+```{python}
+#| title: Publication Frequency
+alt.Chart(df_news).mark_line(point=True).encode(
+    x=alt.X('date:T', timeUnit='yearweek', title='Date'),
+    y=alt.Y('count():Q', title='Number of Articles'),
+).interactive()
+```
