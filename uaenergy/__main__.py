@@ -141,14 +141,14 @@ def process(path, n_topics):
 
     click.echo("Cleaning and translating tags...")
     tags_count = df["tags"].explode().value_counts()
-    tags_uk = set(tags_count[tags_count.gt(5)].index)
-    tags_en = translate_tags(list(tags_uk))
+    tags_uk = tags_count[tags_count.gt(5)].index.tolist()
+    tags_en = translate_tags(tags_uk)
     if len(tags_uk) != len(tags_en):
         click.echo("Tags translation is likely incorrect, please try again.", err=True)
     tags_translations = dict(zip(tags_uk, tags_en))
     df["tags_uk"] = df["tags"].map(
         lambda tags: (
-            [tag for tag in tags if tag in tags_uk] or None
+            [tag for tag in tags if tag in tags_translations] or None
             if tags is not None
             else None
         )

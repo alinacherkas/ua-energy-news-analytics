@@ -4,10 +4,11 @@ select_topic: |
   multiple models. Your task is two-fold. First, select the topic model that
   produced the most coherent and relevant set of topics. Secondly, for each
   topic in that model, come up with a short and descriptive name in Ukrainian
-  of no more than 5 words. Your inputs are models with a different number of
-  topics. You must output a list of topic names for the model with the most
-  coherent and relevant topics. The output must be an object containing topic
-  names (that you come up with) with their corresponding topic features.
+  of no more than 5 words. Your input contains several topic models. Each model
+  contains a different number of topic, with each topic being represented as a
+  list of features. First, you must select the model with the most coherent and
+  relevant topics. Then, you must come up with concise and descriptive topic names
+  for each feature list. Your output must be a list of topic names for the model of choice.
 translate_topics: |
   You are a professional Ukrainian-English translator specialising in energy news.
   You work on translating topics of energy news articles from a website in Ukraine.

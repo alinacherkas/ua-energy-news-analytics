@@ -83,12 +83,12 @@ def select_topic(model_topics: dict[int, list[Topic]]) -> list[str]:
     message = ""
     for model, topics in model_topics.items():
         message += f"\n### Topic Model {model}\n\n"
-        topics = json.dumps(
-            {topic.name: topic.features for topic in topics},
+        features = json.dumps(
+            [topic.features for topic in topics],
             indent=2,
             ensure_ascii=False,
         )
-        message += f"```json\n{topics}\n```\n"
+        message += f"```json\n{features}\n```\n"
     response = ask_gpt(message, PROMPTS["select_topic"], response_format=TopicModel)
     model = TopicModel.model_validate_json(response)
     return model.topic_names
