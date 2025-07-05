@@ -7,6 +7,7 @@ fastparquet == 2024.2.0
 spacy ~= 3.8.3
 uk_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/uk_core_news_sm-3.8.0/uk_core_news_sm-3.8.0-py3-none-any.whl
 scikit-learn ~= 1.6.0
-openai ~= 1.58.1
+openai ~= 1.93.0
+pydantic == 2.11.*
 pyyaml ~= 6.0.2
 click ~= 8.1.8
