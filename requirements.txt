@@ -11,3 +11,5 @@ openai ~= 1.93.0
 pydantic == 2.11.*
 pyyaml ~= 6.0.2
 click ~= 8.1.8
+jupyter ~= 1.1.1
+shinylive == 0.8.3
