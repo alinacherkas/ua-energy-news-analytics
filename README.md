@@ -1,51 +1,58 @@
-# UA Energy Mini Project
- UA Energy: Web Scraping and Text Mining of Energy News in Ukraine
+# UA Energy News Analytics
+Collecting and analysing energy news in Ukraine
 
+> [!NOTE]  
+> 🚧 Work in Progress. This project is currently being updated.
 
-## Repository Structure
+## 📝 Overview
 
-- `UA Energy Mini-Project.ipynb` - a Python notebook demonstrating web scraping and exploratory analysis of [ua-energy.org](https://ua-energy.org). It is **strongly** recommended to view the notebook in nbviewer to see **interactive plots**.
-- `uaenergy.py` - a script with custom scraping functions for ua-energy.org.
-- `UAEnergy_Out*.xlsx` - data files created as part of the scraping. The full set of scraped articles with metadata can be found in `UAEnergy_Out3_MergedArticles.xlsx`.
+This project is designed to collect and analyse publications from UA-Energy, a leading Ukrainian energy news portal. It includes a Python CLI for web-scraing and processing news data and a Quarto dashboard for presenting the results of the analysis, which uses topic modelling and OpenAI API to gain insights into the texts. The dashboard is deployed on GitHub Pages and served using Shinylive as a serverless Shiny application running entirely in a web browser. It also reads data from a Parquet file stored in Azure Blob Storage.
 
-- Click to view [UA Energy Mini-Project.ipynb](https://nbviewer.jupyter.org/github/alinacherkas/UA-Energy-Mini-Project/blob/master/UA%20Energy%20Mini-Project.ipynb)
+## 📂 Repository Structure
 
-## Abstract
+```
+ua-energy-news-analytics/
+│
+├── uaenergy/        # Python modules, including a CLI, for scraping and processing data
+├── _quarto.yml      # a Quarto project configuration file
+├── app.qmd          # a Quarto dashboard
+├── requirements.txt # Python dependencies
+└── README.md        # Project documentation
+```
 
-The mini-project sets out to collect text data from a leading Ukrainian energy news portal. In so doing, I web scrape more than 6 thousand articles with basic metadata and conduct exploratory analysis of energy news. The analysis focuses on (1) the use of tags, (2) mentions of organisations and countries and (3) mentions of persons. I use **regular expressions** to extract relevant information and interactive visualisations to present the results. The five most common tags are:
-- "газ" (gas)
-- "Нафтогаз" (Naftogaz)
-- "НКРЕПК" (National Commission for State Regulation of Energy)
-- "нафта" (oil)
-- "транзит" (transit)
+## ⚙️ Installation
 
-The most frequently mentioned people are:
-- [Andriy Kobolyev](https://en.wikipedia.org/wiki/Andriy_Kobolyev) (CEO of Naftogaz)
-- [Oleksiy Orzhel](https://en.wikipedia.org/wiki/Oleksiy_Orzhel) (former Minister of Energy and Environmental Protection of Ukraine)
-- [Volodymyr Groysman](https://en.wikipedia.org/wiki/Volodymyr_Groysman) (former Prime Minister of Ukraine)
-- [Yuriy Vitrenko](https://en.wikipedia.org/wiki/Vitrenko_Yuriy_Yuriyovytch) (Director for Business Development at Naftogaz)
-- Olha Buslavets (acting Minister of Energy and Environmental Protection of Ukraine as of April 2020)
-- [Oleksiy Honcharuk](https://en.wikipedia.org/wiki/Oleksiy_Honcharuk) (former Prime Minister of Ukraine)
+1. Clone the repository:
+```sh
+git clone https://github.com/alinacherkas/ua-energy-news-analytics
+cd ua-energy-news-analytics
+```
+2. Create a virtual environment and install dependencies:
+```sh
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-The share of articles mentioning these people show clear spikes for politicians but a more stable trend for business figures.
+## 🚀 Usage
 
-## Анотація
+You can run the CLI to collect and process data locally:
 
-Даний міні-проект спрямований на збір текстових даних з провідного українського інформаційно-аналітичного ресурсу у галузі енергетики. Використовуючи веб-скрейпінг, я збираю понад 6 тисяч новин з метаданимии та досліджую їх. Зокрема, я аналізую (1) використання тегів, (2) використання назв організацій та країн, (3) використання імен. Я застосовую **регулярні вирази** для пошуку релевантної інформації та інтерактивні візуалізації для представлення результатів. Аналіз демонструє п'ять найпоширеніших тегів:
-- "газ"
-- "Нафтогаз"
-- "НКРЕПК" (Національна комісія, що здійснює державне регулювання у сферах енергетики та комунальних послуг)
-- "нафта"
-- "транзит"
+```sh
+# print CLI documentation
+python -m uaenergy --help
+# scrape news articles published within specific dates
+python -m uaenergy scrape --date-start 2025-01-01 --date-end 2025-06-30
+# process the raw file
+python -m uaenergy process ua-energy-news-2025-01-01-2025-06-30-raw.parquet.brotli
+```
 
-Найчастіше згадуваними особами є:
-- [Андрій Коболєв](https://uk.wikipedia.org/wiki/Коболєв_Андрій_Володимирович) (голова правління НАК «Нафтогаз України»)
-- [Олексій Оржель](https://uk.wikipedia.org/wiki/Оржель_Олексій_Анатолійович) (колишній міністр енергетики та захисту довкілля України)
-- [Володимир Гройсман](https://uk.wikipedia.org/wiki/Гройсман_Володимир_Борисович) (колишній Прем'єр-міністр України)
-- [Юрій Вітренко](https://uk.wikipedia.org/wiki/Вітренко_Юрій_Юрійович) (виконавчий директор НАК «Нафтогаз України»)
-- [Ольга Буславець](https://uk.wikipedia.org/wiki/Буславець_Ольга_Анатоліївна) (в.о. міністр енергетики та захисту довкілля України з квітня 2020)
-- [Олексій Гончарук](https://uk.wikipedia.org/wiki/Гончарук_Олексій_Валерійович) (колишній Прем'єр-міністр України)
+Running the processing pipeline requires that you have `OPENAI_API_KEY` set as an environment variable. You will also need to install [Quarto](https://quarto.org/docs/get-started/) for running the application locally. Once Quarto is installed, run `quarto preview app.qmd` to launch the app.
 
-Частка статей, у яких названі дані особи, зростає у період політичної активності для політиків, але є більш стабільною для представників бізнесу.
+## 🤝 Contributing
 
-![Dashboard](images/dashboard.png)
+Pull requests are welcome. For major changes, please open an issue first to discuss what you'd like to change.
+
+## 📄 License
+
+This project is licensed under the MIT License.
