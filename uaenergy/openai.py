@@ -7,6 +7,7 @@ from importlib.resources import files
 
 import yaml
 from openai import OpenAI
+from pydantic import BaseModel, Field
 
 from .items import Topic
 
@@ -37,13 +38,12 @@ def ask_gpt(text: str, prompt: str, **kwargs) -> str:
     str
         Response message content from the model.
     """
-    client = OpenAI()
-    completion = client.beta.chat.completions.parse(
-        model="gpt-4o-mini",
+    completion = client.chat.completions.parse(
         messages=[
             {"role": "developer", "content": prompt},
             {"role": "user", "content": text},
         ],
+        model="gpt-4o-mini",
         seed=5,
         temperature=0.0,
         **kwargs,
@@ -69,30 +69,16 @@ def select_topic(model_topics: dict[int, list[Topic]]) -> list[str]:
         A list of generated topic names for the model with
         the most coherent and relevant topics.
     """
-    # define a JSON schema
-    schema = {
-        "properties": {
-            "topic_names": {
-                "description": "A list of short and descriptive topic names in Ukrainian",
-                "items": {"type": "string"},
-                "title": "Topic Names",
-                "type": "array",
-            }
-        },
-        "required": ["topic_names"],
-        "title": "Output",
-        "type": "object",
-        "additionalProperties": False,
-    }
-    # use the schema to define the response format
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "topic_names_response",
-            "schema": schema,
-            "strict": True,
-        },
-    }
+
+    class TopicModel(BaseModel):
+        """
+        Topic model that represents the most coherent and relevant topics.
+        """
+
+        topic_names: list[str] = Field(
+            description="Short and descriptive topic names in Ukrainian"
+        )
+
     # construct an input message using Markdown
     message = ""
     for model, topics in model_topics.items():
@@ -103,11 +89,9 @@ def select_topic(model_topics: dict[int, list[Topic]]) -> list[str]:
             ensure_ascii=False,
         )
         message += f"```json\n{topics}\n```\n"
-    response = ask_gpt(
-        message, PROMPTS["select_topic"], response_format=response_format
-    )
-    response = json.loads(response)
-    return response["topic_names"]
+    response = ask_gpt(message, PROMPTS["select_topic"], response_format=TopicModel)
+    model = TopicModel.model_validate_json(response)
+    return model.topic_names
 
 
 def translate_topics(topics: list[str]) -> list[str]:
@@ -127,37 +111,21 @@ def translate_topics(topics: list[str]) -> list[str]:
     list[str]
         A list of topics translated to English.
     """
-    # define a JSON schema
-    schema = {
-        "properties": {
-            "translations": {
-                "description": "A list of translated topics in English",
-                "items": {"type": "string"},
-                "title": "English topics",
-                "type": "array",
-            }
-        },
-        "required": ["translations"],
-        "title": "Output",
-        "type": "object",
-        "additionalProperties": False,
-    }
-    # use the schema to define the response format
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "topics_response",
-            "schema": schema,
-            "strict": True,
-        },
-    }
+
+    class TopicModel(BaseModel):
+        """
+        Topic model contains topics translated from Ukrainian into English.
+        """
+
+        topic_names: list[str] = Field(
+            description="Short and descriptive topic names in English"
+        )
+
     # construct an input message using Markdown
     message = json.dumps(topics, indent=2, ensure_ascii=False)
-    response = ask_gpt(
-        message, PROMPTS["translate_topics"], response_format=response_format
-    )
-    response = json.loads(response)
-    return response["translations"]
+    response = ask_gpt(message, PROMPTS["translate_topics"], response_format=TopicModel)
+    model = TopicModel.model_validate_json(response)
+    return model.topic_names
 
 
 def translate_tags(tags: list[str]) -> list[str]:
@@ -177,34 +145,16 @@ def translate_tags(tags: list[str]) -> list[str]:
     list[str]
         A list of tags translated to English.
     """
-    # define a JSON schema
-    schema = {
-        "properties": {
-            "translations": {
-                "description": "A list of translated tags in English",
-                "items": {"type": "string"},
-                "title": "English tags",
-                "type": "array",
-            }
-        },
-        "required": ["translations"],
-        "title": "Output",
-        "type": "object",
-        "additionalProperties": False,
-    }
-    # use the schema to define the response format
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "tags_response",
-            "schema": schema,
-            "strict": True,
-        },
-    }
+
+    class Tags(BaseModel):
+        """
+        Tags object containing translated to English.
+        """
+
+        translated: list[str] = Field(description="Translated list of tags in English")
+
     # construct an input message using Markdown
     message = json.dumps(tags, indent=2, ensure_ascii=False)
-    response = ask_gpt(
-        message, PROMPTS["translate_tags"], response_format=response_format
-    )
-    response = json.loads(response)
-    return response["translations"]
+    response = ask_gpt(message, PROMPTS["translate_tags"], response_format=Tags)
+    model = Tags.model_validate_json(response)
+    return model.translated
